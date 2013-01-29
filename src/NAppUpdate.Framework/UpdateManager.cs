@@ -8,6 +8,7 @@ using NAppUpdate.Framework.FeedReaders;
 using NAppUpdate.Framework.Sources;
 using NAppUpdate.Framework.Tasks;
 using NAppUpdate.Framework.Utils;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace NAppUpdate.Framework
 {
@@ -17,6 +18,15 @@ namespace NAppUpdate.Framework
 	public sealed class UpdateManager
 	{
 		#region Singleton Stuff
+
+        [Serializable]
+        class SerializedState
+        {
+            public NauConfigurations Config { get; set; }
+            public IList<IUpdateTask> UpdatesToApply { get; set; }
+            public List<Logger.LogItem> LogItems { get; set; }
+            public UpdateProcessState State { get; set; }
+        }
 
 		/// <summary>
 		/// Defaut ctor
@@ -507,6 +517,40 @@ namespace NAppUpdate.Framework
 				}
 			}
 		}
+
+        public byte[] SerializedStateToMemory()
+        {
+            SerializedState serializedState = new SerializedState();
+            serializedState.Config = Config;
+            serializedState.UpdatesToApply = UpdatesToApply;
+            serializedState.LogItems = Logger.LogItems;
+            serializedState.State = State;
+
+            using (var memoryStream = new MemoryStream())
+            {
+                new BinaryFormatter().Serialize(memoryStream, serializedState);
+                memoryStream.Flush();
+                memoryStream.Close();
+                return memoryStream.GetBuffer();
+            }
+        }
+
+        public void DeserializeStateFromMemory(byte[] state)
+        {
+            if (null == state)
+            {
+                return;
+            }
+
+            using (var memoryStream = new MemoryStream(state))
+            {
+                SerializedState serializedState = new BinaryFormatter().Deserialize(memoryStream) as SerializedState;
+                Config = serializedState.Config;
+                UpdatesToApply = serializedState.UpdatesToApply;
+                Logger = new Logger(serializedState.LogItems);
+                State = serializedState.State;
+            }
+        }
 
 		/// <summary>
 		/// Rollback executed updates in case of an update failure

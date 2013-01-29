@@ -163,7 +163,6 @@ namespace NAppUpdate.Updater
 				}
 				else
 				{
-					MessageBox.Show("Update Failed");
 					Log(Logger.SeverityLevel.Error, "Update failed");
 				}
 
